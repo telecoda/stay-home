@@ -2,18 +2,31 @@ pico-8 cartridge // http://www.pico-8.com
 version 18
 __lua__
 function _init()
+ -- init consts
  left=1
  right=2
  up=3
  down=4
- player = {}
- player.x=64
- player.y=64
- player.direction=down
- player.flip=false 
-	frame=0
-	frame_count=1
-	frame_tick=2
+
+	-- these are the different levels
+	start="start game"
+	outside="outside with friends"
+	inside="inside save the food"
+	on_computer="book shopping slot"
+	inside_2="inside save the food2"
+	on_computer_2="book shopping slot no chance"
+	walk_to_shops="walk to shops"
+	inside_shop="inside shop"
+	walk_back_home="walk back home"
+	watch_news="watch news"
+	clap_nhs="clap nhs"
+	game_over="game over"
+	youre_free="youre free"
+	high_scores="high scores"
+	
+	init_title()
+	
+	levels={start,outside,inside}
 	down_frames={0,1,2,1}
  left_frames={3,4,5,4}
  up_frames={6,7,8,7}
@@ -25,30 +38,56 @@ function _init()
 end
 
 function _draw()
+	draw_func()
+end
+
+function draw_outside()
  cls()
 	palt(3,false)
 	map(0,0,0,0,26,26)
+	draw_player()
+end
+
+function draw_player()
 	palt(3,true)
  palt(0,false)
  anim_frame=anim_frames[player.direction][frame]
  spr(anim_frame,player.x,player.y,1,1,player.flip)
- --spr(down_frames[frame],player.x,player.y)
-	
-	--spr(down_frames[frame],4,4)
-	--spr(left_frames[frame],16,4)
-	--spr(left_frames[frame],28,4,1,1,true)
- --spr(up_frames[frame],40,4)
 end
 
+function draw_title()
+	-- this is the title page for the game
+	cls(0)
+	print("welcome to",44,8,7)
+	print("stay home",46,18,7)
+	print("by @telecoda",40,28,7)
+	print("a game about",40,48,10)
+	print("social distancing",30,58,10)
+	print("for ludum dare 46",30,78,7)
+	print("press up to start",30,98,8)
+
+	draw_player()
+end
+
+function init_title()
+	player_init()
+	draw_func=draw_title
+	update_func=update_title
+ player.x=30
+ player.y=15
+ frame_tick=10
+end
+
+
 function _update()
+	update_func()
+end
 
-	-- move based on key
-	if (btn(0)) then move_left() end
-	if (btn(1)) then move_right() end
-	if (btn(2)) then move_up() end
-	if (btn(3)) then move_down() end
-	
-
+function move_down()
+ player.direction=down
+ player.flip=false
+	player.y = player.y +1
+	update_frame()
 end
 
 function move_left()
@@ -72,11 +111,23 @@ function move_up()
 	update_frame()
 end
 
-function move_down()
+function player_init()
+ player = {}
+ player.x=64
+ player.y=64
  player.direction=down
- player.flip=false
-	player.y = player.y +1
-	update_frame()
+ player.flip=false 
+
+	frame=0
+	frame_count=1
+	frame_tick=2
+end
+
+function start_game()
+ player_init()
+	
+	draw_func=draw_outside
+	update_func=update_outside
 end
 
 function update_frame()
@@ -88,6 +139,18 @@ function update_frame()
 			frame = 1
 		end
 	end
+end
+
+function update_outside()
+	if (btn(0)) then move_left() end
+	if (btn(1)) then move_right() end
+	if (btn(2)) then move_up() end
+	if (btn(3)) then move_down() end
+end
+
+function update_title()
+ update_frame()
+	if (btn()>0) then start_game() end
 end
 __gfx__
 333333333cc33cc333333333333333333333cc3333333333333333333cc33cc33333333300000000000000000000000000000000000000000000000000000000
