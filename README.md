@@ -3,6 +3,8 @@
 
 The theme for this jam was `Keep it alive`
 
+Coded using [pico8](https://www.lexaloffle.com/pico-8.php)
+
 This is a game about keeping a little gopher alive during the Cornavirus pandemic.
 
 ## Screenshot
