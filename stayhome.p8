@@ -17,6 +17,9 @@ function _init()
  anim_frames[down]=down_frames
  anim_frames[up]=up_frames
 
+	intro_text={}
+	intro_timer=0
+
 	title_level = {}
 	title_level.init = init_title
 	title_level.draw = draw_title
@@ -57,10 +60,10 @@ function _init()
 	title_id=1
 	announce_id=2
 	friends_id=3
-	outside_id=4
-	gameover_id=5
-	freedom_id=6
-	pacfood_id=7
+	pacfood_id=4
+	outside_id=5
+	gameover_id=6
+	freedom_id=7
 	-- todo id's
 	--book_shop_id=8
 	--pac_food2_id=9
@@ -72,7 +75,7 @@ function _init()
 	--high_scores_id=15
 	
 	-- this should match last level in game
-	last_level = friends_id
+	last_level = pacfood_id
 
 	levels[title_id]=title_level
 	levels[announce_id]=announce_level
@@ -85,9 +88,8 @@ function _init()
  -- call start here to init stuff
  start_game()
 	
-	set_level(pacfood_id)
-	--set_level(title_id)
-	
+	set_level(title_id)
+	--set_level(pacfood_id)
  
 end
 
@@ -139,7 +141,8 @@ end
 function draw_announce()
  cls()
 	print("march 23, 2020",35,11,11)
-	map(16,0,32,32,23,23)
+	map(16,0,32,32,8,8)
+	draw_intro_text()
 end
 
 function draw_friends()
@@ -166,6 +169,17 @@ function draw_friends()
 	draw_hud()
 end
 
+
+function draw_gopher(gopher)
+	palt(3,true)
+ palt(0,false)
+ pal(12,gopher.colour)
+ anim_frame=anim_frames[gopher.direction][gopher.frame]
+ spr(anim_frame,gopher.x,gopher.y,1,1,gopher.flip)
+ -- revert palette swap
+ pal(12,12)
+end
+
 function draw_hud()
  rectfill(0,110,128,128,6)
  rect(1,111,126,126,5)
@@ -181,27 +195,33 @@ function draw_hud()
 	else
 		print("health:"..health,64,120,7)
  end
+ 
+ draw_intro_text() 
 end
 
-function draw_kid(kid)
-	palt(3,true)
- palt(0,false)
- -- swap blue for kid colour
- pal(12,kid.colour)
- kid.flip=false
- --anim_frame=anim_frames[player.direction][frame]
- --spr(anim_frame,player.x,player.y,1,1,player.flip)
- spr(anim_frame,kid.x,kid.y,1,1,kid.flip)
- -- revert palette swap
- pal(12,12)
+function draw_intro_text()
+ if intro_timer > 0 then
+ 	-- draw intro text rect
+		lines=#intro_text
+		height=lines*6+10
+		top=64-height/2
+		bottom=64+height/2
+  rectfill(4,top,124,bottom,12)
+  rect(5,top+1,123,bottom-1,13)
+		for i=1,#intro_text do
+		 line=intro_text[i]
+   x=(64-(#line/2)*4)		
+ 		print(line,x,top+i*6,7)
+		end		
+ 	intro_timer = intro_timer-1
+	end
 end
-
 
 function draw_outside()
  cls()
 	palt(3,false)
 	map(0,0,0,0,26,26)
-	draw_player()
+	draw_gopher(player)
 	draw_hud()
 end
 
@@ -210,20 +230,12 @@ function draw_pacfood()
 	-- draw maze
 	palt(3,false)
 	map(24,0,0,0,26,26)
-	draw_player()
+	draw_gopher(player)
 	-- draw kids
 	for i=1,#kids do
-		draw_kid(kids[i])
+		draw_gopher(kids[i])
 	end
 	draw_hud()
-end
-
-
-function draw_player()
-	palt(3,true)
- palt(0,false)
- anim_frame=anim_frames[player.direction][frame]
- spr(anim_frame,player.x,player.y,1,1,player.flip)
 end
 
 function draw_title()
@@ -237,7 +249,7 @@ function draw_title()
 	print("for ludum dare 46",30,78,7)
 	print("press up to start",30,98,8)
 
-	draw_player()
+	draw_gopher(player)
 end
 
 function game_over()
@@ -246,6 +258,8 @@ function game_over()
 end
 
 function init_announce()
+	intro_text = {"uk announces stay at home", "campaign to stop the", "coronavirus spreading"}
+	intro_timer = 120
 end
 
 function init_gameover()
@@ -255,6 +269,9 @@ function init_freedom()
 end
 
 function init_friends()
+	intro_text = {"answer some questions", "about social distancing", "do you know what to do?"}
+	intro_timer = 120
+
 	questions = {}
 
 	question1 = {}
@@ -288,29 +305,34 @@ function init_outside()
 end
 
 function init_pacfood()
+	intro_text = {"stop the kids", "from eating all the food", "like a reverse pacman"}
+	intro_timer = 120
  player.x=60
  player.y=87
-	kid1={}
-	kid1.x=40
-	kid1.y=24
-	kid1.colour=8
-	kid2={}
-	kid2.x=54
-	kid2.y=24
-	kid2.colour=14
-	kid3={}
-	kid3.x=66
-	kid3.y=24
-	kid3.colour=9
-	kid4={}
-	kid4.x=80
-	kid4.y=24
-	kid4.colour=11
+	kid1=init_kid(40,24,8)
+	kid2=init_kid(54,24,14)
+	kid3=init_kid(66,24,9)
+	kid4=init_kid(80,24,11)
  kids={kid1,kid2,kid3,kid4}
+end
 
+function init_kid(x,y,colour)
+	kid={}
+	kid.x=x
+	kid.y=y
+	kid.colour=colour
+	kid.flip=false
+	kid.direction=down
+
+	kid.frame=0
+	kid.frame_count=1
+	kid.frame_tick=2
+
+	return kid
 end
 
 function init_question()
+
 	current_question=questions[current_question_number]
  selected_answer=1
 	choices={current_question.correct,current_question.wrong1,current_question.wrong2}
@@ -327,35 +349,35 @@ function init_title()
 	update_func=update_title
  player.x=30
  player.y=15
- frame_tick=10
+ player.frame_tick=10
 end
 
 function move_down()
  player.direction=down
  player.flip=false
 	player.y = player.y +1
-	update_frame()
+	player=update_frame(player)
 end
 
 function move_left()
  player.direction=left
  player.flip=true
 	player.x = player.x -1
-	update_frame()
+	player=update_frame(player)
 end
 
 function move_right()
  player.direction=right
  player.flip=false
 	player.x = player.x +1
-	update_frame()
+	player=update_frame(player)
 end
 
 function move_up()
  player.direction=up
  player.flip=false
 	player.y = player.y -1
-	update_frame()
+	player=update_frame(player)
 end
 
 function player_init()
@@ -363,11 +385,12 @@ function player_init()
  player.x=64
  player.y=64
  player.direction=down
+ player.colour=12
  player.flip=false 
 
-	frame=0
-	frame_count=1
-	frame_tick=2
+	player.frame=0
+	player.frame_count=1
+	player.frame_tick=2
 end
 
 function next_level(id)
@@ -429,15 +452,16 @@ function update_gameover()
 	end
 end
 
-function update_frame()
-	frame_count = frame_count+1
-	if frame_count > frame_tick then
-		frame_count=1
-		frame = frame +1
-		if frame > #down_frames then
-			frame = 1
+function update_frame(gopher)
+	gopher.frame_count = gopher.frame_count+1
+	if gopher.frame_count > gopher.frame_tick then
+		gopher.frame_count=1
+		gopher.frame = gopher.frame +1
+		if gopher.frame > #down_frames then
+			gopher.frame = 1
 		end
 	end
+	return gopher
 end
 
 function update_freedom()
@@ -461,7 +485,7 @@ function update_pacfood()
 end
 
 function update_title()
- update_frame()
+ update_frame(player)
 	if (btnp()>0) then start_game() end
 end
 __gfx__
