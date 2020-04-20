@@ -16,6 +16,11 @@ function _init()
  anim_frames[right]=left_frames
  anim_frames[down]=down_frames
  anim_frames[up]=up_frames
+ 
+ maze_map_x=24
+ food_dot_small=19
+ food_dot_large=20
+ food_dot_empty=21
 
 	intro_text={}
 	intro_timer=0
@@ -88,9 +93,12 @@ function _init()
  -- call start here to init stuff
  start_game()
 	
+	-- set real level_id
 	set_level(title_id)
-	--set_level(pacfood_id)
- 
+	
+	-- set temp: level_id for testing	
+	set_level(pacfood_id)
+	debug_grid=false 
 end
 
 function _draw()
@@ -99,6 +107,50 @@ end
 
 function _update()
 	update_func()
+end
+
+function can_move(gopher,x_offset,y_offset)
+	-- returns 2 bools
+	-- first bool can move
+	-- second bool has food
+ maze_x, maze_y = get_map_loc(gopher.x+x_offset,gopher.y+y_offset)
+ maze_x = maze_x + maze_map_x
+
+ cell = mget(maze_x,maze_y)
+	if cell==food_dot_small or cell == food_dot_large or cell == food_dot_empty then
+		if gopher.kid and cell != food_dot_empty then
+			--eat_food(maze_x,maze_y)
+			return true,true
+		end 
+		return true,false
+	end
+	return false,false
+end
+
+function eat_food(gopher,x_offset,y_offset)
+ maze_x, maze_y = get_map_loc(gopher.x+x_offset,gopher.y+y_offset)
+ maze_x = maze_x + maze_map_x
+
+ cell = mget(maze_x,maze_y)
+	if cell==food_dot_small or cell == food_dot_large then
+		food = food -1
+	 mset(maze_x,maze_y,food_dot_empty)
+	end
+end
+
+
+function change_direction(gopher) 
+	if gopher.kid then
+		-- is the player in front of me?
+		dist_x = abs(player.x-gopher.x)
+		dist_y = abs(player.y-gopher.y)
+
+		dist = sqrt((dist_x*dist_x)+(dist_y*dist_y))
+	 if dist < 8 then
+	 	gopher.direction=player.direction
+	 end
+	end
+
 end
 
 function check_answer()
@@ -188,15 +240,39 @@ function draw_hud()
 	-- days
 	print("days:"..days,64,113,7)
 	-- food
-	print("food:"..food,4,120,7)
+	food_colour=7
+	if food<10 then
+		food_colour=8
+	end
+	print(" food:"..food,4,120,food_colour)
 	-- health
-	if health == 0 then
- 	print("health:"..health,64,120,8)
-	else
-		print("health:"..health,64,120,7)
- end
- 
+	health_colour=7
+	if health<10 then
+		health_colour=8
+	end
+
+	print("  ♥:"..health,64,120,health_colour)
  draw_intro_text() 
+
+	if debug_grid then
+		-- draw grid + coords
+		for x=0,128,8 do
+			line(x,0,x,128,7)
+			line(0,x,128,x,7)
+		end
+		print("x:"..player.x.." y:"..player.y,2,2,8)
+		map_x,map_y=get_map_loc(player.x,player.y)
+		print("mx:"..map_x.." my:"..map_y,2,10,8)
+		-- draw player pos
+		cx = player.x+4
+		cy = player.y+4
+		line(cx-1,cy,cx+1,cy,8)
+		line(cx,cy-1,cx,cy+1,8)
+		dx = abs(player.x-kids[1].x)
+		dy = abs(player.y-kids[1].y)
+		print("dx:"..dx.." dy:"..dy,2,18,8)
+
+	end
 end
 
 function draw_intro_text()
@@ -209,9 +285,9 @@ function draw_intro_text()
   rectfill(4,top,124,bottom,12)
   rect(5,top+1,123,bottom-1,13)
 		for i=1,#intro_text do
-		 line=intro_text[i]
-   x=(64-(#line/2)*4)		
- 		print(line,x,top+i*6,7)
+		 text_line=intro_text[i]
+   x=(64-(#text_line/2)*4)		
+ 		print(text_line,x,top+i*6,7)
 		end		
  	intro_timer = intro_timer-1
 	end
@@ -229,7 +305,7 @@ function draw_pacfood()
  cls()
 	-- draw maze
 	palt(3,false)
-	map(24,0,0,0,26,26)
+	map(maze_map_x,0,0,0,26,26)
 	draw_gopher(player)
 	-- draw kids
 	for i=1,#kids do
@@ -252,9 +328,23 @@ function draw_title()
 	draw_gopher(player)
 end
 
+--function eat_food(maze_x,maze,y)
+	--food = food -1
+	--mset(maze_x,maze_y,food_dot_empty)
+--end
+
 function game_over()
 	set_level(gameover_id)
 	health=0
+end
+
+function get_map_loc(gopher_x,gopher_y)
+	-- convert x,y to map x,y
+	cx = gopher_x+4
+	cy = gopher_y+4
+	x=flr(cx/8)
+	y=flr(cy/8)
+	return x,y
 end
 
 function init_announce()
@@ -309,11 +399,13 @@ function init_pacfood()
 	intro_timer = 120
  player.x=60
  player.y=87
-	kid1=init_kid(40,24,8)
-	kid2=init_kid(54,24,14)
-	kid3=init_kid(66,24,9)
-	kid4=init_kid(80,24,11)
- kids={kid1,kid2,kid3,kid4}
+ kid_colours={8,14,9,11}
+ max_kids=4
+ kids={}
+	for i=1,max_kids do
+		kid=init_kid(40+(i%6)*8,24,kid_colours[(i%4)+1])
+		kids[i]=kid
+	end
 end
 
 function init_kid(x,y,colour)
@@ -322,7 +414,9 @@ function init_kid(x,y,colour)
 	kid.y=y
 	kid.colour=colour
 	kid.flip=false
-	kid.direction=down
+	kid.kid=true
+	kid.direction=left
+ kid.dir_count=0
 
 	kid.frame=0
 	kid.frame_count=1
@@ -352,32 +446,148 @@ function init_title()
  player.frame_tick=10
 end
 
-function move_down()
- player.direction=down
- player.flip=false
-	player.y = player.y +1
-	player=update_frame(player)
+function move_down(gopher)
+ gopher.direction=down
+ gopher.flip=false
+ moved=false
+	if can_move(gopher,0,3) then
+		gopher.y = gopher.y +1
+		moved=true
+	end
+	gopher=update_frame(gopher)
+	return moved
 end
 
-function move_left()
- player.direction=left
- player.flip=true
-	player.x = player.x -1
-	player=update_frame(player)
+function move_direction(kid)
+
+	-- try to find a direction
+	-- with food
+	can_move_left,left_has_food = can_move(kid,-5,0)
+	can_move_right,right_has_food = can_move(kid,3,0)
+	can_move_up,up_has_food = can_move(kid,0,-5)
+	can_move_down,down_has_food = can_move(kid,0,3)
+
+	has_foods={}
+	can_moves={}
+
+	if left_has_food then
+		add(has_foods,left)
+	end
+	if right_has_food then
+		add(has_foods,right)
+	end
+	if up_has_food then
+		add(has_foods,up)
+	end
+	if down_has_food then
+		add(has_foods,down)
+	end
+
+	if can_move_left then
+		add(can_moves,left)
+	end
+	if can_move_right then
+		add(can_moves,right)
+	end
+	if can_move_up then
+		add(can_moves,up)
+	end
+	if can_move_down then
+		add(can_moves,down)
+	end
+
+	if #has_foods >0 then
+		-- pick a random dir with food
+		kid.direction=has_foods[flr(rnd(#has_foods))+1]		
+		return true
+	end
+
+	if #can_moves >0 then
+		-- pick a random dir
+		kid.direction=can_moves[flr(rnd(#can_moves))+1]		
+		return false
+	end
+
+
 end
 
-function move_right()
- player.direction=right
- player.flip=false
-	player.x = player.x +1
-	player=update_frame(player)
+function move_kid(kid)
+ moved=false
+
+	if kid.direction==left
+ then
+		eat_food(kid,-5,0)
+		move_left(kid)
+		return kid
+	end
+	if kid.direction==right then
+ 	eat_food(kid,3,0)
+		move_right(kid)
+		return kid
+	end
+	if kid.direction==up then
+ 	eat_food(kid,0,-5)
+		move_up(kid)
+		return kid
+	end
+	if kid.direction==down then
+ 	eat_food(kid,0,3)
+		move_down(kid)
+		return kid
+	end
+
+	return kid
 end
 
-function move_up()
- player.direction=up
- player.flip=false
-	player.y = player.y -1
-	player=update_frame(player)
+function move_kids()
+	for i=1,#kids do
+		kid=kids[i]
+		if kid.dir_count < 1 then
+			move_direction(kid)
+			kids[i]=move_kid(kid)
+			kid.dir_count=10
+		else
+		 kid.dir_count=kid.dir_count-1
+			kids[i]=move_kid(kid)
+		end
+		change_direction(kid)		
+	end
+end
+
+function move_left(gopher)
+ gopher.direction=left
+ gopher.flip=true
+ moved=false
+	if can_move(gopher,-5,0) then
+		gopher.x = gopher.x -1
+		moved=true
+	end
+	gopher=update_frame(gopher)
+	return moved
+end
+
+function move_right(gopher)
+ gopher.direction=right
+ gopher.flip=false
+ moved=false
+	if can_move(gopher,3,0) then
+ 	gopher.x = gopher.x +1
+ 	moved=true
+	end
+	gopher=update_frame(gopher)
+	return moved
+end
+
+function move_up(gopher)
+ gopher.direction=up
+ gopher.flip=false
+ moved=false
+	if can_move(gopher,0,-5) then
+		gopher.y = gopher.y -1
+		moved=true
+	end
+	gopher=update_frame(gopher)
+	return moved
 end
 
 function player_init()
@@ -385,8 +595,10 @@ function player_init()
  player.x=64
  player.y=64
  player.direction=down
+ player.dir_count=0
  player.colour=12
- player.flip=false 
+ player.flip=false
+	player.kid=false
 
 	player.frame=0
 	player.frame_count=1
@@ -416,7 +628,7 @@ end
 function start_game()
  player_init()
  score=0
- food=100
+ food=86
  health=100
  days=0
 	set_level(announce_id)
@@ -471,17 +683,22 @@ function update_freedom()
 end
 
 function update_outside()
-	if (btn(0)) then move_left() end
-	if (btn(1)) then move_right() end
-	if (btn(2)) then move_up() end
-	if (btn(3)) then move_down() end
+	if (btn(0)) then move_left(player) end
+	if (btn(1)) then move_right(player) end
+	if (btn(2)) then move_up(player) end
+	if (btn(3)) then move_down(player) end
 end
 
 function update_pacfood()
-	if (btn(0)) then move_left() end
-	if (btn(1)) then move_right() end
-	if (btn(2)) then move_up() end
-	if (btn(3)) then move_down() end
+
+	if intro_timer==0 then
+		move_kids()
+	end
+
+	if (btn(0)) then move_left(player) end
+	if (btn(1)) then move_right(player) end
+	if (btn(2)) then move_up(player) end
+	if (btn(3)) then move_down(player) end
 end
 
 function update_title()
@@ -594,10 +811,10 @@ __map__
 1010101010101010101010101010101090919293949596973022222221132315002313202222223100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 10101010101010101010101010101010a0a1a2a3a4a5a6a72022222231133022223113302222222100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 10101010101010101010101010101010b0b1b2b3b4b5b6b72313131313131313131313131313132300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-1010101010101010101010101010101000000000000000002314230020222222222222211323142300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+1010101010101010101010101010101000000000000000002314231320222222222222211323142300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 1010101010101010101010101010101000000000000000002313231330222221202222311323132300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 1010101010101010101010101010101000000000000000002313231313131330311313131323132300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-1010101010101010101010101010101000000000000000002313302222221315151322222231132300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+1010101010101010101010101010101000000000000000002313302222221313131322222231132300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 1111111111111111111111111111111100000000000000002313131313131320211313131313132300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 1212121212121212121212121212121200000000000000003022222222222231302222222222223100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __sfx__
